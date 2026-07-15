@@ -1,0 +1,27 @@
+title: "Ivan Ivančič"
+description: "Security Research - Bug Bounty & Application Security"
+author:
+  name: "Ivan Ivančič"
+  email: "ivanivancic721@gmail.com"
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+plugins:
+  - jekyll-relative-links
+
+relative_links:
+  enabled: true
+  collections: true
+
+defaults:
+  -
+    scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
+
+theme: jekyll-theme-minimal
