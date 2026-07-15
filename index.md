@@ -17,9 +17,7 @@ title: Home
 
 ## About
 
-Application security researcher specializing in authentication/authorization bypasses, 
-server-side code execution, and protocol analysis. Currently open to AppSec and 
-penetration testing roles.
+Application security researcher.
 
 - **Certification:** CPTS (Hack The Box)
 - **CVE:** GHSA-9jh8-v38h-cvhr (ammonia mXSS)
