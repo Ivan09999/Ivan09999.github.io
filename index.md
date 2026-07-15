@@ -21,7 +21,7 @@ title: Home
 
 | Finding | Type | Severity | Status |
 |---------|------|----------|--------|
-| Remote Code Execution (3 paths) | Command Injection | Critical | Paid — disclosure pending |
+| Remote Code Execution (3 paths) | Command Injection | Critical | Paid - disclosure pending |
 | OAuth Wildcard Redirect Bypass | Authentication Bypass | Critical | Under review |
 | mXSS in Rust HTML Sanitizer | XSS | Moderate | CVE-2026-XXXX |
 | Post-Eviction Meeting Recording | Access Control | High | Under review |
@@ -31,9 +31,7 @@ title: Home
 
 ## About
 
-Application security researcher specializing in authentication/authorization bypasses, 
-server-side code execution, and protocol analysis. Currently open to AppSec and 
-penetration testing roles.
+Application security researcher.
 
 ---
 
