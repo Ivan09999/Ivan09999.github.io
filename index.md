@@ -11,7 +11,7 @@ title: Home
 | OAuth Wildcard Redirect Bypass | Authentication Bypass | <span class="severity-c">Critical</span> | <span class="status-pending">Under review</span> |
 | mXSS in Rust HTML Sanitizer | XSS | <span class="severity-m">Moderate</span> | <span class="status-cve">https://github.com/rust-ammonia/ammonia/security/advisories/GHSA-9jh8-v38h-cvhr</span> |
 | Post-Eviction Meeting Recording | Access Control | <span class="severity-h">High</span> | <span class="status-pending">Under review</span> |
-| SSRF → Internal Data Exposure | SSRF | <span class="severity-h">High</span> | <span class="status-paid">Paid (€880)</span> |
+| SSRF → Internal Data Exposure | SSRF | <span class="severity-h">High</span> | <span class="status-paid">Paid</span> |
 
 ---
 
