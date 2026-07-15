@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if page.title %}{{ page.title }} — {% endif %}Ivan Ivančič</title>
+    <style>
+        :root {
+            --bg: #fafafa;
+            --fg: #1a1a1a;
+            --muted: #666;
+            --border: #e0e0e0;
+            --accent: #0969da;
+            --accent-hover: #0550ae;
+            --code-bg: #f4f4f4;
+            --critical: #cf222e;
+            --high: #bc4c00;
+            --medium: #0969da;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0d1117;
+                --fg: #c9d1d9;
+                --muted: #8b949e;
+                --border: #30363d;
+                --accent: #58a6ff;
+                --accent-hover: #79c0ff;
+                --code-bg: #161b22;
+                --critical: #f85149;
+                --high: #ffa657;
+                --medium: #58a6ff;
+            }
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.7;
+            color: var(--fg);
+            background: var(--bg);
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem 4rem;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.15s;
+        }
+
+        a:hover {
+            border-bottom-color: var(--accent);
+        }
+
+        /* Header */
+        .site-header {
+            margin-bottom: 3rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .site-header h1 {
+            font-size: 1.9rem;
+            font-weight: 700;
+            margin: 0 0 0.3rem;
+            letter-spacing: -0.02em;
+        }
+
+        .site-header .tagline {
+            color: var(--muted);
+            font-size: 1.05rem;
+            margin: 0;
+        }
+
+        .site-header .meta {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        .site-header .meta a {
+            margin-right: 1rem;
+            color: var(--muted);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .site-header .meta a:hover {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        /* Content */
+        h1, h2, h3 {
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.3;
+        }
+
+        h1 { font-size: 1.7rem; }
+        h2 { font-size: 1.35rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+        h3 { font-size: 1.1rem; color: var(--muted); }
+
+        p { margin: 0 0 1.2rem; }
+
+        ul, ol { margin: 0 0 1.5rem; padding-left: 1.5rem; }
+
+        li { margin-bottom: 0.4rem; }
+
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 0.88em;
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.1rem;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin: 0 0 1.5rem;
+        }
+
+        pre code {
+            background: none;
+            border: none;
+            padding: 0;
+            font-size: inherit;
+        }
+
+        blockquote {
+            border-left: 3px solid var(--accent);
+            margin: 1.5rem 0;
+            padding: 0.5rem 0 0.5rem 1.2rem;
+            color: var(--muted);
+            font-style: italic;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2.5rem 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+            margin: 1.5rem 0;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.65rem 0.8rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+        }
+
+        tr:hover td {
+            background: rgba(149, 157, 165, 0.05);
+        }
+
+        .severity-c { color: var(--critical); font-weight: 600; }
+        .severity-h { color: var(--high); font-weight: 600; }
+        .severity-m { color: var(--medium); font-weight: 600; }
+
+        .status-paid { color: #1a7f37; font-weight: 500; }
+        .status-pending { color: var(--muted); }
+        .status-cve { color: var(--accent); font-weight: 600; }
+
+        /* Footer */
+        .site-footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.9rem;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        /* Mobile */
+        @media (max-width: 600px) {
+            body { padding: 2rem 1rem 3rem; font-size: 15px; }
+            .site-header h1 { font-size: 1.5rem; }
+            h2 { font-size: 1.15rem; }
+            table { font-size: 0.85rem; }
+            th, td { padding: 0.5rem 0.4rem; }
+        }
+
+        /* Smooth scroll */
+        html { scroll-behavior: smooth; }
+    </style>
+</head>
+<body>
+
+    <header class="site-header">
+        <h1>Ivan Ivančič</h1>
+        <p class="tagline">Security Research — Bug Bounty & Application Security</p>
+        <div class="meta">
+            <a href="mailto:ivanivancic721@gmail.com">Email</a>
+            <a href="https://www.linkedin.com/in/ivan-ivan%C4%8Di%C4%87-a3438a1aa">LinkedIn</a>
+            <a href="https://github.com/Ivan09999">GitHub</a>
+        </div>
+    </header>
+
+    <main>
+        {{ content }}
+    </main>
+
+    <footer class="site-footer">
+        CPTS · CVE-2026-XXXX · <a href="mailto:ivanivancic721@gmail.com">ivanivancic721@gmail.com</a>
+    </footer>
+
+</body>
+</html>
