@@ -17,7 +17,7 @@ title: Home
 
 ## About
 
-Application security researcher.
+Application Security Researcher focused on vulnerability research, offensive security automation, and AI-assisted application security.
 
 - **Certification:** CPTS (Hack The Box)
 - **CVE:** GHSA-9jh8-v38h-cvhr (ammonia mXSS)
