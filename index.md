@@ -5,8 +5,6 @@ title: Home
 
 ## Selected Findings
 
-*Full writeups coming soon.*
-
 | Finding | Type | Severity | Status |
 |---------|------|----------|--------|
 | Remote Code Execution (3 paths) | Command Injection | <span class="severity-c">Critical</span> | <span class="status-pending">Paid - disclosure pending</span> |
@@ -19,8 +17,10 @@ title: Home
 
 ## About
 
-Application security researcher.
+Application security researcher specializing in authentication/authorization bypasses, 
+server-side code execution, and protocol analysis. Currently open to AppSec and 
+penetration testing roles.
 
 - **Certification:** CPTS (Hack The Box)
-- ammonia mXSS = https://github.com/rust-ammonia/ammonia/security/advisories/GHSA-9jh8-v38h-cvhr
+- **CVE:** GHSA-9jh8-v38h-cvhr (ammonia mXSS)
 - **Contact:** [ivanivancic721@gmail.com](mailto:ivanivancic721@gmail.com)
