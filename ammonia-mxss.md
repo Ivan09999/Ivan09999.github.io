@@ -249,8 +249,6 @@ This research was performed using Zero, my private application security research
 
 ### References
 
-### References
-
 - [GHSA-9jh8-v38h-cvhr — mXSS in ammonia via MathML `annotation-xml` encoding strip](https://github.com/rust-ammonia/ammonia/security/advisories/GHSA-9jh8-v38h-cvhr)
 - [GHSA-mm7x-qfjj-5g2c — Prior mXSS advisory patched in 4.1.2](https://github.com/rust-ammonia/ammonia/security/advisories/GHSA-mm7x-qfjj-5g2c)
 - [Commit `63075dd` — Source code diff for the 4.1.3 fix](https://github.com/rust-ammonia/ammonia/commit/63075ddc94bb58e5cc7b40dcee42f6641f5ac0f6)
@@ -262,5 +260,3 @@ This research was performed using Zero, my private application security research
 ---
 
 *Found by: [Ivan Ivančič](index.html)*
-
-*Found by: Ivan Ivančič*
