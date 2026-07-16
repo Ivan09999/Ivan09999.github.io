@@ -7,7 +7,7 @@ title: "mXSS in ammonia"
 
 **Reading time: 8 minutes**
 
-**CVE:** CVE-2026-63430
+**CVE:** CVE-2026-63430        
 **Project:** ammonia (Rust HTML sanitizer, crates.io)  
 **Status:** [Published - GHSA-9jh8-v38h-cvhr](https://github.com/rust-ammonia/ammonia/security/advisories/GHSA-9jh8-v38h-cvhr)  
 **Severity:** Moderate  
