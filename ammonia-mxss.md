@@ -249,13 +249,18 @@ This research was performed using Zero, my private application security research
 
 ### References
 
-- [GHSA-9jh8-v38h-cvhr - mXSS in ammonia via MathML](https://github.com/rust-ammonia/ammonia/security/advisories/GHSA-9jh8-v38h-cvhr)
-- [GHSA-mm7x-qfjj-5g2c - Prior mXSS advisory patched in 4.1.2](https://github.com/rust-ammonia/ammonia/security/advisories/GHSA-mm7x-qfjj-5g2c)
-- Commit
-- [Release v4.1.3 - Patch release](https://github.com/rust-ammonia/ammonia/blob/master/CHANGELOG.md)
-- [ammonia 4.1.3 Release Notes](https://github.com/rust-ammonia/ammonia/blob/master/CHANGELOG.md)
-- RUSTSEC-2026-0193 - RustSec advisory
-- WHATWG HTML Standard - MathML text integration points
-- WHATWG HTML Standard - HTML integration points
+### References
+
+- [GHSA-9jh8-v38h-cvhr — mXSS in ammonia via MathML `annotation-xml` encoding strip](https://github.com/rust-ammonia/ammonia/security/advisories/GHSA-9jh8-v38h-cvhr)
+- [GHSA-mm7x-qfjj-5g2c — Prior mXSS advisory patched in 4.1.2](https://github.com/rust-ammonia/ammonia/security/advisories/GHSA-mm7x-qfjj-5g2c)
+- [Commit `63075dd` — Source code diff for the 4.1.3 fix](https://github.com/rust-ammonia/ammonia/commit/63075ddc94bb58e5cc7b40dcee42f6641f5ac0f6)
+- [Release v4.1.3 — Patch release](https://github.com/rust-ammonia/ammonia/releases/tag/v4.1.3)
+- [RUSTSEC-2026-0193 — RustSec advisory](https://rustsec.org/advisories/RUSTSEC-2026-0193.html)
+- [WHATWG HTML Standard — MathML text integration points](https://html.spec.whatwg.org/#mathml-text-integration-point)
+- [WHATWG HTML Standard — HTML integration points](https://html.spec.whatwg.org/#html-integration-point)
+
+---
+
+*Found by: [Ivan Ivančič](index.html)*
 
 *Found by: Ivan Ivančič*
