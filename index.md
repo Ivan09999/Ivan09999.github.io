@@ -8,7 +8,7 @@ title: Home
 | Finding | Type | Severity | Status |
 |---------|------|----------|--------|
 | [mXSS in Rust HTML Sanitizer](ammonia-mxss.html) | XSS | <span class="severity-m">Moderate</span> | <span class="status-cve">CVE-2026-63430</span> |
-| [Remote Code Execution (3 paths)](RCE-readme.html) | Command Injection | <span class="severity-c">Critical</span> | <span class="status-pending">Paid - 3k USD</span> |
+| [RCE (3 paths)](RCE-readme.html) | Command Injection | <span class="severity-c">Critical</span> | <span class="status-pending">Paid - 3k USD</span> |
 | OAuth Wildcard Redirect Bypass | Authentication Bypass | <span class="severity-c">Critical</span> | <span class="status-pending">Under review</span> |
 | Post-Eviction Meeting Recording | Access Control | <span class="severity-h">High</span> | <span class="status-pending">Under review</span> |
 | SSRF → Internal Data Exposure | SSRF | <span class="severity-h">High</span> | <span class="status-paid">Paid - disclosure pending</span> |
