@@ -1,24 +1,26 @@
 ---
 layout: default
-title: "One Root Cause, Three RCE Sinks"
+title: "3 RCEs, One Root Cause"
 ---
-## One Root Cause, Three RCE Sinks: Auditing ReadMe's Server-Side MDX Pipeline
 
-*How an arithmetic probe uncovered three independently reachable server-side RCE sinks sharing one root cause.*
+## 3 RCEs, One Root Cause: Auditing ReadMe's Server-Side MDX Pipeline
 
-*Note: The vulnerable behavior described in this article has since been remediated by the vendor. The discussion focuses on the investigation methodology, root cause analysis, and lessons learned.*
+How an arithmetic probe uncovered three independently reachable server-side RCE sinks sharing one root cause.
+
+*Note: The vulnerable behavior described in this article has since been remediated by the vendor. Public disclosure was authorized by ReadMe. The discussion focuses on the investigation methodology, root cause analysis, and lessons learned.*
 
 **Reading time: 12 minutes**
 
 **Date:** June 2026  
 **Severity:** Critical · CVSS 3.1: 9.9 `AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H`  
+**Bounty:** $3,000  
 **CWE:** CWE-94 (Code Injection) → CWE-78 (OS Command Injection)
 
 ---
 
 ### Introduction
 
-While investigating ReadMe's documentation rendering pipeline, I discovered that several independent rendering surfaces evaluated MDX expressions server-side. The first finding looked like a single endpoint issue. It was not. A broader review of the architecture revealed multiple independently reachable sinks, all behaving consistently with a shared server-side evaluation pipeline running in an unsandboxed Node.js context.
+While investigating ReadMe's documentation rendering pipeline, I discovered that several independent rendering surfaces evaluated MDX expressions server-side. The first finding looked like a single endpoint issue. It was not. A broader review of the architecture revealed three independently reachable rendering sinks that all shared the same unsandboxed server-side MDX evaluation pipeline.
 
 This article walks through the investigation: how an arithmetic probe confirmed server-side evaluation, how the Node scope was mapped, why `process` survived when `require` did not, and how the root cause turned out to be a shared evaluation pipeline rather than a single vulnerable route. The goal is not to document one bug, but to show how to reason about server-side rendering pipelines when looking for expression-evaluation vulnerabilities.
 
@@ -40,49 +42,45 @@ The question is never whether MDX *can* evaluate expressions. It can. The questi
 
 Based on the observed behavior, the rendering pipeline appeared to follow a structure similar to the following:
 
-```text
-+---------------------+
-|       Content       |
-| (MDX stored in docs,|
-| custom blocks,      |
-| custom pages)       |
-+----------+----------+
-           |
-           v
-+---------------------+
-|       Storage       |
-| (stored MDX/docs)   |
-+----------+----------+
-           |
-           v
-+---------------------+
-|    Render Route     |
-| GET /docs/{slug}    |
-| POST /custom_blocks |
-| GET /page/{slug}    |
-+----------+----------+
-           |
-           v
-+---------------------+
-|      SSR Layer      |
-| (MDX compilation &  |
-| server-side render) |
-+----------+----------+
-           |
-           v
-+---------------------+
-| Expression Eval     |
-| (server-side JS)    |
-+----------+----------+
-           |
-           v
-+---------------------+
-|    HTML Output      |
-| (returned to client)|
-+---------------------+
-```
+<figure style="text-align:center; margin:2rem 0; overflow:hidden; max-width:100%;">
+  <svg viewBox="0 0 500 370" xmlns="http://www.w3.org/2000/svg" style="max-width: 100%; width: 420px; height: auto; display: block; margin: 0 auto 1rem auto;">
+    <rect x="150" y="10" width="200" height="36" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="250" y="33" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="13">Content</text>
 
----
+    <line x1="250" y1="46" x2="250" y2="66" stroke="#00ff41" stroke-width="1.5"/>
+    <polygon points="250,72 246,66 254,66" fill="#00ff41"/>
+
+    <rect x="150" y="72" width="200" height="36" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="250" y="95" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="13">Storage</text>
+
+    <line x1="250" y1="108" x2="250" y2="128" stroke="#00ff41" stroke-width="1.5"/>
+    <polygon points="250,134 246,128 254,128" fill="#00ff41"/>
+
+    <rect x="150" y="134" width="200" height="36" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="250" y="150" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="13"><tspan x="250">Render Route</tspan><tspan x="250" dy="15">/docs /custom_blocks /page</tspan></text>
+
+    <line x1="250" y1="170" x2="250" y2="190" stroke="#00ff41" stroke-width="1.5"/>
+    <polygon points="250,196 246,190 254,190" fill="#00ff41"/>
+
+    <rect x="150" y="196" width="200" height="36" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="250" y="212" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="13"><tspan x="250">SSR Layer</tspan><tspan x="250" dy="15">(server-side MDX processing)</tspan></text>
+
+    <line x1="250" y1="232" x2="250" y2="252" stroke="#00ff41" stroke-width="1.5"/>
+    <polygon points="250,258 246,252 254,252" fill="#00ff41"/>
+
+    <rect x="150" y="258" width="200" height="36" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="250" y="281" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="13">Expression Evaluation</text>
+
+    <line x1="250" y1="294" x2="250" y2="314" stroke="#00ff41" stroke-width="1.5"/>
+    <polygon points="250,320 246,314 254,314" fill="#00ff41"/>
+
+    <rect x="150" y="320" width="200" height="36" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="250" y="343" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="13">HTML Output</text>
+  </svg>
+  <figcaption style="font-size: 0.9rem; color: #888; font-style: italic;">
+    Figure 1. The rendering pipeline. Content flows through storage and render routes into a shared SSR layer where expressions are evaluated server-side.
+  </figcaption>
+</figure>
 
 Three things matter here.
 
@@ -117,7 +115,7 @@ Content-Type: application/json
 {"data":{"...":"<p>zz49zz</p>"}}
 ```
 
-The response contained `49`. The expression was evaluated before the response was generated. That confirmed server-side evaluation on this route.
+The response contained `49`, confirming that the expression had been evaluated on the server before the HTML was returned. That confirmed server-side evaluation on this route.
 
 At this point, the finding was a server-side JavaScript injection. An authenticated editor could evaluate arbitrary JavaScript expressions on the server. The next question was what the execution scope actually contained.
 
@@ -161,7 +159,11 @@ This told a clear story.
 
 `fetch` was `function`. Outbound network access was available from the scope.
 
-The critical chain was `process` → `process.binding` → `spawn_sync`. `process.binding` is the legacy internal API that Node modules use to reach native code. It is deprecated and hidden behind `--no-deprecation` in most contexts, but it is still present in production Node builds. `process.binding('spawn_sync')` returns the internal binding used by `child_process.spawnSync`. Calling it directly bypasses the `child_process` module entirely.
+The critical chain was:
+
+**`process` → `process.binding()` → `spawn_sync` → OS command execution**
+
+`process.binding` is the legacy internal API that Node modules use to reach native code. It is deprecated and hidden behind `--no-deprecation` in most contexts, but it is still present in production Node builds. `process.binding('spawn_sync')` returns the internal binding used by `child_process.spawnSync`. Calling it directly bypasses the `child_process` module entirely.
 
 **Command execution probe**
 ```
@@ -186,28 +188,87 @@ The critical chain was `process` → `process.binding` → `spawn_sync`. `proces
 
 The reason `spawn_sync` worked is that `process.binding` hands back a native binding object with a `spawn` method. That method does the same work as `child_process.spawnSync`, but it is not gated by the module system. Stripping `require` does not strip `process.binding`. The lockdown was incomplete because it targeted the wrong surface.
 
+<figure style="text-align:center; margin:2rem 0; overflow:hidden; max-width:100%;">
+  <svg viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg" style="max-width: 100%; width: 350px; height: auto; display: block; margin: 0 auto 1rem auto;">
+    <rect x="150" y="10" width="200" height="36" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="250" y="33" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="13">Author uploads MDX</text>
+
+    <line x1="250" y1="46" x2="250" y2="66" stroke="#00ff41" stroke-width="1.5"/>
+    <polygon points="250,72 246,66 254,66" fill="#00ff41"/>
+
+    <rect x="150" y="72" width="200" height="36" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="250" y="88" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="13"><tspan x="250">Server evaluates</tspan><tspan x="250" dy="15">{7*7} → 49</tspan></text>
+
+    <line x1="250" y1="108" x2="250" y2="128" stroke="#00ff41" stroke-width="1.5"/>
+    <polygon points="250,134 246,128 254,128" fill="#00ff41"/>
+
+    <rect x="150" y="134" width="200" height="36" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="250" y="157" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="13">JavaScript Expression</text>
+
+    <line x1="250" y1="170" x2="250" y2="190" stroke="#00ff41" stroke-width="1.5"/>
+    <polygon points="250,196 246,190 254,190" fill="#00ff41"/>
+
+    <rect x="150" y="196" width="200" height="36" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="250" y="219" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="13">process.binding()</text>
+
+    <line x1="250" y1="232" x2="250" y2="252" stroke="#ff3333" stroke-width="1.5"/>
+    <polygon points="250,258 246,252 254,252" fill="#ff3333"/>
+
+    <rect x="150" y="258" width="200" height="36" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="250" y="281" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="13">spawn_sync</text>
+
+    <line x1="250" y1="294" x2="250" y2="314" stroke="#ff3333" stroke-width="1.5"/>
+    <polygon points="250,320 246,314 254,314" fill="#ff3333"/>
+
+    <rect x="150" y="320" width="200" height="36" rx="4" fill="#1a0a0a" stroke="#ff3333" stroke-width="1"/>
+    <text x="250" y="343" text-anchor="middle" fill="#ff3333" font-family="JetBrains Mono, monospace" font-size="13" font-weight="600">OS Command Execution</text>
+  </svg>
+  <figcaption style="font-size: 0.9rem; color: #888; font-style: italic;">
+    Figure 2. The attack chain. An arithmetic probe escalates through the Node.js scope to OS command execution via process.binding.
+  </figcaption>
+</figure>
+
 ---
 
 ### Finding Additional Sinks
 
-```text
-                 +----------------------+
-                 |   Shared SSR Layer   |
-                 |  MDX Compilation &   |
-                 | Expression Evaluation|
-                 +----------+-----------+
-                            ^
-                            |
-        +-------------------+-------------------+
-        |                   |                   |
-        |                   |                   |
-+---------------+   +---------------+   +---------------+
-| Docs Guides   |   | Custom Blocks |   | Custom Pages  |
-| GET /docs/*   |   | POST /render  |   | GET /page/*   |
-+---------------+   +---------------+   +---------------+
-```
+Once the root cause was clear, the investigation shifted. The question stopped being "which endpoint is vulnerable" and became "which rendering surfaces share this evaluation logic."
 
----
+The mental model was simple. Any route that takes stored MDX content, passes it through the shared SSR layer, and returns rendered HTML is a candidate. The endpoint does not matter. The evaluation path matters.
+
+<figure style="text-align:center; margin:2rem 0; overflow:hidden; max-width:100%;">
+  <svg viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg" style="max-width: 100%; width: 450px; height: auto; display: block; margin: 0 auto 1rem auto;">
+    <!-- Docs guides -->
+    <rect x="20" y="20" width="130" height="36" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="85" y="43" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="12">Docs guides</text>
+    <line x1="150" y1="38" x2="195" y2="100" stroke="#00ff41" stroke-width="1.5"/>
+    <polygon points="195,100 187,96 190,90" fill="#00ff41"/>
+
+    <!-- Custom blocks -->
+    <rect x="20" y="92" width="130" height="36" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="85" y="115" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="12">Custom blocks</text>
+    <line x1="150" y1="110" x2="215" y2="110" stroke="#00ff41" stroke-width="1.5"/>
+    <polygon points="215,110 209,106 209,114" fill="#00ff41"/>
+
+    <!-- Custom pages -->
+    <rect x="20" y="164" width="130" height="36" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="85" y="187" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="12">Custom pages</text>
+    <line x1="150" y1="182" x2="195" y2="120" stroke="#00ff41" stroke-width="1.5"/>
+    <polygon points="195,120 190,128 187,122" fill="#00ff41"/>
+
+    <!-- Shared MDX Evaluation Pipeline (red - the bug) -->
+    <rect x="215" y="92" width="180" height="36" rx="4" fill="#1a0a0a" stroke="#ff3333" stroke-width="1"/>
+    <text x="305" y="108" text-anchor="middle" fill="#ff3333" font-family="JetBrains Mono, monospace" font-size="12"><tspan x="305">Shared MDX Evaluation</tspan><tspan x="305" dy="14">Pipeline (unsandboxed)</tspan></text>
+
+    <!-- Arrow to RCE -->
+    <line x1="395" y1="110" x2="450" y2="110" stroke="#ff3333" stroke-width="1.5"/>
+    <polygon points="450,110 444,106 444,114" fill="#ff3333"/>
+    <text x="470" y="114" text-anchor="middle" fill="#ff3333" font-family="JetBrains Mono, monospace" font-size="12" font-weight="600">RCE</text>
+  </svg>
+  <figcaption style="font-size: 0.9rem; color: #888; font-style: italic;">
+    Figure 3. Three independent content types all funnel through the same shared MDX evaluation pipeline where unsandboxed expression evaluation enables RCE.
+  </figcaption>
+</figure>
 
 Three content types fit the model:
 
@@ -225,22 +286,32 @@ This is the methodological takeaway. When a rendering sink is found, the right m
 
 ### Root Cause
 
-```text
-+---------------------------------------------------------------+
-|               Shared MDX Evaluation Layer                     |
-|                                                               |
-|  Server-side expression evaluation without                   |
-|  an effective sandbox  <---------- Root Cause                 |
-|                                                               |
-|   +-------------+  +-------------+  +-------------+           |
-|   | Docs        |  | Custom      |  | Custom      |           |
-|   | Renderer    |  | Blocks      |  | Pages       |           |
-|   |             |  | Renderer    |  | Renderer    |           |
-|   +-------------+  +-------------+  +-------------+           |
-+---------------------------------------------------------------+
-```
+The observed behavior strongly suggests that the renderer evaluated MDX expressions in an unsandboxed Node.js context. The behavior was consistent with a renderer configured to evaluate expressions server-side without an effective sandbox.
 
----
+All three rendering surfaces exhibited identical behavior, suggesting they shared the same evaluation pipeline. There was no evidence of a per-route override. The docs renderer, the custom blocks renderer, and the custom pages renderer all produced the same results from the same payloads, which strongly suggested a common rendering implementation underlying all three.
+
+<figure style="text-align:center; margin:2rem 0; overflow:hidden; max-width:100%;">
+  <svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg" style="max-width: 100%; width: 500px; height: auto; display: block; margin: 0 auto 1rem auto;">
+    <!-- Outer box - shared evaluation layer -->
+    <rect x="40" y="20" width="420" height="160" rx="6" fill="#1a0a0a" stroke="#ff3333" stroke-width="1.5"/>
+    <text x="250" y="45" text-anchor="middle" fill="#ff3333" font-family="JetBrains Mono, monospace" font-size="13" font-weight="600">Shared MDX Evaluation Layer</text>
+    <text x="250" y="62" text-anchor="middle" fill="#888" font-family="JetBrains Mono, monospace" font-size="11">server-side expression evaluation, no effective sandbox</text>
+    <text x="250" y="78" text-anchor="middle" fill="#ff3333" font-family="JetBrains Mono, monospace" font-size="10">◀── root cause</text>
+
+    <!-- Three inner renderer boxes -->
+    <rect x="70" y="100" width="110" height="50" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="125" y="120" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="11"><tspan x="125">Docs</tspan><tspan x="125" dy="14">renderer</tspan></text>
+
+    <rect x="195" y="100" width="110" height="50" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="250" y="120" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="11"><tspan x="250">Custom blocks</tspan><tspan x="250" dy="14">renderer</tspan></text>
+
+    <rect x="320" y="100" width="110" height="50" rx="4" fill="#111" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="375" y="120" text-anchor="middle" fill="#d0d0d0" font-family="JetBrains Mono, monospace" font-size="11"><tspan x="375">Custom pages</tspan><tspan x="375" dy="14">renderer</tspan></text>
+  </svg>
+  <figcaption style="font-size: 0.9rem; color: #888; font-style: italic;">
+    Figure 4. The root cause. All three renderers inherit the same unsafe evaluation layer. Fixing one route does not fix the architecture.
+  </figcaption>
+</figure>
 
 This is a common architectural pattern, and a common failure mode. A rendering service centralizes its MDX handling to avoid duplication. That centralization is good engineering. But if the centralized behavior is unsafe, every consumer inherits the risk. The fix is not to patch routes. The fix is to fix the evaluation behavior at the shared layer.
 
@@ -256,9 +327,10 @@ The escalation from expression evaluation to RCE depended on three things being 
 
 **No string or keyword filter was applied.** The payload contained literal strings like `spawn_sync`, `/bin/sh`, and `whoami`. None were blocked. A keyword-based filter might have detected these strings. The absence of any filter meant the trivial payload worked directly.
 
-These three conditions compound. Removing any one of them would have stopped the trivial exploit. `process` out of scope closes the binding path. `process.binding` removed closes the native spawn path. A keyword filter on `spawn_sync` forces the attacker into obfuscation, which is harder but not impossible. The defense in depth was absent. One gap was enough.
+These three conditions compound. Removing any one of them would have stopped the trivial exploit. `process` out of scope closes the binding path. `process.binding` removed closes the native spawn path. A keyword filter on `spawn_sync` forces the attacker into obfuscation, which is harder but not impossible. One missing layer of defense was enough to enable full RCE.
 
 ---
+
 
 ### Patch Recommendations
 
@@ -266,7 +338,7 @@ The fix belongs at the shared layer, not at individual routes.
 
 **Disable server-side expression evaluation.** If expressions do not need to run on the server, the safest option is to not evaluate them there. If server-side evaluation is unnecessary, treating `{ ... }` as literal text eliminates the attack surface entirely.
 
-**Sandbox evaluation if it must run.** If server-side evaluation is a product requirement, it must run in a hardened JavaScript sandbox. `isolated-vm` provides a separate V8 isolate with its own heap and no access to the host process. At minimum, the sandbox must remove `process`, `global`, `globalThis`, `Function`, `fetch`, and `process.binding` from the evaluation scope. The sandbox must be applied at the shared evaluation layer so every route inherits it.
+**Sandbox evaluation if it must run.** If server-side evaluation is a product requirement, it must run in a hardened JavaScript sandbox. `isolated-vm` provides a separate V8 isolate with its own heap and no access to the host process. At minimum, the evaluation scope should not expose `process`, `process.binding`, `globalThis`, or the `Function` constructor. The sandbox must be applied at the shared evaluation layer so every route inherits it.
 
 **Remove dangerous globals from the scope.** If a sandbox is not feasible, at minimum strip `process` and `process.binding` from the evaluation scope. Stripping `require` alone is insufficient. `process.binding` is the bypass path.
 
@@ -298,6 +370,16 @@ The fix belongs at the shared layer, not at individual routes.
 | 2026-06-14 | Reported sink #2 (docs/{slug}) and sink #3 (custom_pages /page/{slug}) |
 | 2026-06-16 | Vendor acknowledged submissions |
 | 2026-06-29 | Vendor confirmed all three shared a previously reported root cause |
+
+---
+
+### Conclusion
+
+What initially appeared to be a single server-side code execution bug ultimately turned out to be an architectural issue affecting multiple rendering surfaces.
+
+Rather than treating the first vulnerable endpoint as an isolated finding, following the shared rendering pipeline uncovered three independently reachable RCE sinks originating from the same underlying evaluation behavior.
+
+For security researchers, the lesson is straightforward: when a rendering sink is discovered, understanding the application's architecture is often more valuable than continued endpoint fuzzing. Shared execution paths frequently create shared vulnerabilities, and fixing the architecture - not individual routes - is what ultimately eliminates the risk.
 
 ---
 
