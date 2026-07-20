@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "One Root Cause, Three RCE Sinks"
+title: "3 RCEs, One Root Cause"
 ---
 
 ## 3 RCEs, One Root Cause: Auditing ReadMe's Server-Side MDX Pipeline
