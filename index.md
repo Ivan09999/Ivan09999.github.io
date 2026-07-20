@@ -19,6 +19,6 @@ title: Home
 
 Application Security Researcher focused on vulnerability research, offensive security automation, and AI-assisted application security.
 
-- **Certification:** CPTS (Hack The Box)
+- **Certification:** CPTS (Hack The Box),
 - **CVE:** GHSA-9jh8-v38h-cvhr (ammonia mXSS)
 - **Contact:** [ivanivancic721@gmail.com](mailto:ivanivancic721@gmail.com)
