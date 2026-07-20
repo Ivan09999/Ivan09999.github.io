@@ -1,25 +1,23 @@
 ---
 layout: default
-title: "Three RCEs, One Root Cause"
+title: "One Root Cause, Three RCE Sinks"
 ---
 
-## Three RCEs, One Root Cause: Auditing ReadMe's Server-Side MDX Pipeline
+## One Root Cause, Three RCE Sinks: Auditing ReadMe's Server-Side MDX Pipeline
 
 *How an arithmetic probe uncovered three independently reachable server-side RCE sinks sharing one root cause.*
 
-*Note: The vulnerable behavior described in this article has since been remediated by the vendor. Public disclosure was authorized by ReadMe. The discussion focuses on the investigation methodology, root cause analysis, and lessons learned.*
+*Note: The vulnerable behavior described in this article has since been remediated by the vendor. The discussion focuses on the investigation methodology, root cause analysis, and lessons learned.*
 
 **Reading time: 12 minutes**
 
 **Date:** June 2026  
 **Severity:** Critical · CVSS 3.1: 9.9 `AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H`  
-**Bounty:** $3,000
+**CWE:** CWE-94 (Code Injection) → CWE-78 (OS Command Injection)
 
 ---
 
 ### Introduction
-
-ReadMe is a hosted documentation platform used by thousands of companies, including major API providers and SaaS businesses, to publish developer docs, interactive API references, and changelogs. Its rendering pipeline compiles MDX server-side to deliver dynamic documentation content.
 
 While investigating ReadMe's documentation rendering pipeline, I discovered that several independent rendering surfaces evaluated MDX expressions server-side. The first finding looked like a single endpoint issue. It was not. A broader review of the architecture revealed multiple independently reachable sinks, all behaving consistently with a shared server-side evaluation pipeline running in an unsandboxed Node.js context.
 
@@ -44,34 +42,34 @@ The question is never whether MDX *can* evaluate expressions. It can. The questi
 Based on the observed behavior, the rendering pipeline appeared to follow a structure similar to the following:
 
 ```
-  ┌───────────────┐
-  │    content    │  (MDX body stored in docs, custom blocks, custom pages)
-  └───────┬───────┘
-          │
-          ▼
-  ┌───────────────┐
-  │    storage    │  (stored documentation and MDX content)
-  └───────┬───────┘
-          │
-          ▼
-  ┌───────────────┐
-  │ render route  │  (GET /docs/{slug}, POST /custom_blocks/render, GET /page/{slug})
-  └───────┬───────┘
-          │
-          ▼
-  ┌───────────────┐
-  │   SSR layer   │  (server-side renderer, MDX processing)
-  └───────┬───────┘
-          │
-          ▼
-  ┌───────────────┐
-  │   expr eval   │  (server-side expression evaluation)
-  └───────┬───────┘
-          │
-          ▼
-  ┌───────────────┐
-  │  HTML output  │  (returned to reader's browser)
-  └───────────────┘
+  ┌─────────────┐
+  │   content    │  (MDX body stored in docs, custom blocks, custom pages)
+  └──────┬───────┘
+         │
+         ▼
+  ┌─────────────┐
+  │  storage     │  (stored documentation and MDX content)
+  └──────┬───────┘
+         │
+         ▼
+  ┌─────────────┐
+  │ render route │  (GET /docs/{slug}, POST /custom_blocks/render, GET /page/{slug})
+  └──────┬───────┘
+         │
+         ▼
+  ┌─────────────┐
+  │   SSR layer  │  (server-side renderer, MDX processing)
+  └──────┬───────┘
+         │
+         ▼
+  ┌─────────────┐
+  │ expr eval    │  (server-side expression evaluation)
+  └──────┬───────┘
+         │
+         ▼
+  ┌─────────────┐
+  │  HTML output │  (returned to reader's browser)
+  └─────────────┘
 ```
 
 Three things matter here.
@@ -176,8 +174,6 @@ The critical chain was `process` → `process.binding` → `spawn_sync`. `proces
 
 The reason `spawn_sync` worked is that `process.binding` hands back a native binding object with a `spawn` method. That method does the same work as `child_process.spawnSync`, but it is not gated by the module system. Stripping `require` does not strip `process.binding`. The lockdown was incomplete because it targeted the wrong surface.
 
-At this point, the investigation shifted from exploit development to architecture analysis. Rather than searching for more payloads, I wanted to understand whether the renderer itself was shared across other content types.
-
 ---
 
 ### Finding Additional Sinks
@@ -196,9 +192,9 @@ The mental model was simple. Any route that takes stored MDX content, passes it 
 
 Three content types fit the model:
 
-- **Docs guides** - the primary documentation content type, served at `GET /docs/{slug}`. The body is stored as documentation content.
-- **Custom blocks** - reusable MDX components, rendered via `POST /custom_blocks/{name}/render`. The source is stored as MDX content.
-- **Custom pages** - standalone pages served at `GET /page/{slug}`. The body is stored as page content.
+- **Docs guides** — the primary documentation content type, served at `GET /docs/{slug}`. The body is stored as documentation content.
+- **Custom blocks** — reusable MDX components, rendered via `POST /custom_blocks/{name}/render`. The source is stored as MDX content.
+- **Custom pages** — standalone pages served at `GET /page/{slug}`. The body is stored as page content.
 
 Each was tested with the same arithmetic probe. Each returned `49`. Each was then tested with the `whoami` payload. Each returned `<service-account>`.
 
@@ -216,14 +212,14 @@ All three rendering surfaces exhibited identical behavior, suggesting they share
 
 ```
   ┌──────────────────────────────────────────────────┐
-  │         shared MDX evaluation layer              │
-  │   (server-side expression evaluation,            │
-  │    no effective sandbox)      ◀── root cause     │
-  │                                                  │
+  │         shared MDX evaluation layer                │
+  │   (server-side expression evaluation,              │
+  │    no effective sandbox)      ◀── root cause       │
+  │                                                    │
   │   ┌──────────┐  ┌──────────┐  ┌──────────┐       │
-  │   │docs      │  │custom    │  │custom    │       │
-  │   │renderer  │  │blocks    │  │pages     │       │
-  │   │          │  │renderer  │  │renderer  │       │
+  │   │ docs     │  │ custom   │  │ custom   │       │
+  │   │ renderer │  │ blocks   │  │ pages    │       │
+  │   │          │  │ renderer │  │ renderer │       │
   │   └──────────┘  └──────────┘  └──────────┘       │
   └──────────────────────────────────────────────────┘
 ```
@@ -243,12 +239,6 @@ The escalation from expression evaluation to RCE depended on three things being 
 **No string or keyword filter was applied.** The payload contained literal strings like `spawn_sync`, `/bin/sh`, and `whoami`. None were blocked. A keyword-based filter might have detected these strings. The absence of any filter meant the trivial payload worked directly.
 
 These three conditions compound. Removing any one of them would have stopped the trivial exploit. `process` out of scope closes the binding path. `process.binding` removed closes the native spawn path. A keyword filter on `spawn_sync` forces the attacker into obfuscation, which is harder but not impossible. The defense in depth was absent. One gap was enough.
-
----
-
-### Responsible Validation
-
-All testing used harmless probes. Arithmetic (`{7*7}`), type checks (`typeof process`), and a single `whoami` were the extent of command execution. No environment variables were dumped. No filesystem was enumerated beyond confirming the service account identity. No destructive commands ran. No outbound network calls were made. All test content was removed after validation.
 
 ---
 
@@ -297,8 +287,8 @@ The fix belongs at the shared layer, not at individual routes.
 
 - [ReadMe MDX documentation](https://docs.readme.com/main/docs/mdx)
 - [ReadMe Custom Pages API](https://docs.readme.com/main/reference/getcustompages)
-- [CWE-94 - Code Injection](https://cwe.mitre.org/data/definitions/94.html)
-- [CWE-78 - OS Command Injection](https://cwe.mitre.org/data/definitions/78.html)
+- [CWE-94 — Code Injection](https://cwe.mitre.org/data/definitions/94.html)
+- [CWE-78 — OS Command Injection](https://cwe.mitre.org/data/definitions/78.html)
 - [MDX specification](https://mdxjs.com/)
 - [Node.js process.binding deprecation](https://nodejs.org/api/deprecations.html#DEP0111)
 - [Node.js child_process documentation](https://nodejs.org/api/child_process.html)
