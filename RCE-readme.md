@@ -2,7 +2,6 @@
 layout: default
 title: "One Root Cause, Three RCE Sinks"
 ---
-
 ## One Root Cause, Three RCE Sinks: Auditing ReadMe's Server-Side MDX Pipeline
 
 *How an arithmetic probe uncovered three independently reachable server-side RCE sinks sharing one root cause.*
