@@ -41,36 +41,49 @@ The question is never whether MDX *can* evaluate expressions. It can. The questi
 
 Based on the observed behavior, the rendering pipeline appeared to follow a structure similar to the following:
 
+```text
++---------------------+
+|       Content       |
+| (MDX stored in docs,|
+| custom blocks,      |
+| custom pages)       |
++----------+----------+
+           |
+           v
++---------------------+
+|       Storage       |
+| (stored MDX/docs)   |
++----------+----------+
+           |
+           v
++---------------------+
+|    Render Route     |
+| GET /docs/{slug}    |
+| POST /custom_blocks |
+| GET /page/{slug}    |
++----------+----------+
+           |
+           v
++---------------------+
+|      SSR Layer      |
+| (MDX compilation &  |
+| server-side render) |
++----------+----------+
+           |
+           v
++---------------------+
+| Expression Eval     |
+| (server-side JS)    |
++----------+----------+
+           |
+           v
++---------------------+
+|    HTML Output      |
+| (returned to client)|
++---------------------+
 ```
-  ┌─────────────┐
-  │   content    │  (MDX body stored in docs, custom blocks, custom pages)
-  └──────┬───────┘
-         │
-         ▼
-  ┌─────────────┐
-  │  storage     │  (stored documentation and MDX content)
-  └──────┬───────┘
-         │
-         ▼
-  ┌─────────────┐
-  │ render route │  (GET /docs/{slug}, POST /custom_blocks/render, GET /page/{slug})
-  └──────┬───────┘
-         │
-         ▼
-  ┌─────────────┐
-  │   SSR layer  │  (server-side renderer, MDX processing)
-  └──────┬───────┘
-         │
-         ▼
-  ┌─────────────┐
-  │ expr eval    │  (server-side expression evaluation)
-  └──────┬───────┘
-         │
-         ▼
-  ┌─────────────┐
-  │  HTML output │  (returned to reader's browser)
-  └─────────────┘
-```
+
+---
 
 Three things matter here.
 
@@ -178,17 +191,24 @@ The reason `spawn_sync` worked is that `process.binding` hands back a native bin
 
 ### Finding Additional Sinks
 
-Once the root cause was clear, the investigation shifted. The question stopped being "which endpoint is vulnerable" and became "which rendering surfaces share this evaluation logic."
-
-The mental model was simple. Any route that takes stored MDX content, passes it through the shared SSR layer, and returns rendered HTML is a candidate. The endpoint does not matter. The evaluation path matters.
-
+```text
+                 +----------------------+
+                 |   Shared SSR Layer   |
+                 |  MDX Compilation &   |
+                 | Expression Evaluation|
+                 +----------+-----------+
+                            ^
+                            |
+        +-------------------+-------------------+
+        |                   |                   |
+        |                   |                   |
++---------------+   +---------------+   +---------------+
+| Docs Guides   |   | Custom Blocks |   | Custom Pages  |
+| GET /docs/*   |   | POST /render  |   | GET /page/*   |
++---------------+   +---------------+   +---------------+
 ```
-  docs guides ──────┐
-                    │
-  custom blocks ────┼──▶ shared SSR layer ──▶ server-side expression
-                    │                            evaluation (unsandboxed)
-  custom pages ─────┘
-```
+
+---
 
 Three content types fit the model:
 
@@ -206,23 +226,22 @@ This is the methodological takeaway. When a rendering sink is found, the right m
 
 ### Root Cause
 
-Based on the observed behavior, the renderer appeared to evaluate MDX expressions in an unsandboxed Node.js context. The behavior was consistent with a renderer configured to evaluate expressions server-side without an effective sandbox.
-
-All three rendering surfaces exhibited identical behavior, suggesting they shared the same evaluation pipeline. There was no evidence of a per-route override. The docs renderer, the custom blocks renderer, and the custom pages renderer all produced the same results from the same payloads, which strongly suggested a common rendering implementation underlying all three.
-
+```text
++---------------------------------------------------------------+
+|               Shared MDX Evaluation Layer                     |
+|                                                               |
+|  Server-side expression evaluation without                   |
+|  an effective sandbox  <---------- Root Cause                 |
+|                                                               |
+|   +-------------+  +-------------+  +-------------+           |
+|   | Docs        |  | Custom      |  | Custom      |           |
+|   | Renderer    |  | Blocks      |  | Pages       |           |
+|   |             |  | Renderer    |  | Renderer    |           |
+|   +-------------+  +-------------+  +-------------+           |
++---------------------------------------------------------------+
 ```
-  ┌──────────────────────────────────────────────────┐
-  │         shared MDX evaluation layer                │
-  │   (server-side expression evaluation,              │
-  │    no effective sandbox)      ◀── root cause       │
-  │                                                    │
-  │   ┌──────────┐  ┌──────────┐  ┌──────────┐       │
-  │   │ docs     │  │ custom   │  │ custom   │       │
-  │   │ renderer │  │ blocks   │  │ pages    │       │
-  │   │          │  │ renderer │  │ renderer │       │
-  │   └──────────┘  └──────────┘  └──────────┘       │
-  └──────────────────────────────────────────────────┘
-```
+
+---
 
 This is a common architectural pattern, and a common failure mode. A rendering service centralizes its MDX handling to avoid duplication. That centralization is good engineering. But if the centralized behavior is unsafe, every consumer inherits the risk. The fix is not to patch routes. The fix is to fix the evaluation behavior at the shared layer.
 
