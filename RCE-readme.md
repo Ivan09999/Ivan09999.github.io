@@ -13,7 +13,7 @@ How an arithmetic probe uncovered three independently reachable server-side RCE 
 
 **Date:** June 2026  
 **Severity:** Critical · CVSS 3.1: 9.9 `AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H`  
-**Bounty:** $3,000  
+**Bounty:** $$$$
 **CWE:** CWE-94 (Code Injection) → CWE-78 (OS Command Injection)
 
 ---
