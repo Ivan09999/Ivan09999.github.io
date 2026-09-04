@@ -3,11 +3,11 @@ layout: default
 title: "3 RCEs, One Root Cause"
 ---
 
-## 3 RCEs, One Root Cause: Auditing ReadMe's Server-Side MDX Pipeline
+## 3 RCEs, One Root Cause: Auditing redact's Server-Side MDX Pipeline
 
 How an arithmetic probe uncovered three independently reachable server-side RCE sinks sharing one root cause.
 
-*Note: The vulnerable behavior described in this article has since been remediated by the vendor. Public disclosure was authorized by ReadMe. The discussion focuses on the investigation methodology, root cause analysis, and lessons learned.*
+*Note: The vulnerable behavior described in this article has since been remediated by the vendor. Public disclosure was authorized by redact. The discussion focuses on the investigation methodology, root cause analysis, and lessons learned.*
 
 **Reading time: 12 minutes**
 
@@ -20,7 +20,7 @@ How an arithmetic probe uncovered three independently reachable server-side RCE 
 
 ### Introduction
 
-While investigating ReadMe's documentation rendering pipeline, I discovered that several independent rendering surfaces evaluated MDX expressions server-side. The first finding looked like a single endpoint issue. It was not. A broader review of the architecture revealed three independently reachable rendering sinks that all shared the same unsandboxed server-side MDX evaluation pipeline.
+While investigating redact's documentation rendering pipeline, I discovered that several independent rendering surfaces evaluated MDX expressions server-side. The first finding looked like a single endpoint issue. It was not. A broader review of the architecture revealed three independently reachable rendering sinks that all shared the same unsandboxed server-side MDX evaluation pipeline.
 
 This article walks through the investigation: how an arithmetic probe confirmed server-side evaluation, how the Node scope was mapped, why `process` survived when `require` did not, and how the root cause turned out to be a shared evaluation pipeline rather than a single vulnerable route. The goal is not to document one bug, but to show how to reason about server-side rendering pipelines when looking for expression-evaluation vulnerabilities.
 
@@ -34,7 +34,7 @@ In a purely client-side setup, expression evaluation runs in the browser. An aut
 
 Server-side rendering changes the threat model entirely. When a server compiles MDX and evaluates expressions before sending HTML to the browser, the expressions run in the server's runtime. A JavaScript expression evaluated on the server can potentially have access to server-side objects such as `process`, `require`, `global`, and anything the Node process can reach. If the evaluation scope is not sandboxed, an author who can store MDX content can execute code on the server.
 
-The question is never whether MDX *can* evaluate expressions. It can. The question is *where* that evaluation happens, and what the sandbox looks like. ReadMe's public documentation describes authoring content using MDX, but does not indicate that expressions are evaluated server-side. The observed behavior told a different story.
+The question is never whether MDX *can* evaluate expressions. It can. The question is *where* that evaluation happens, and what the sandbox looks like. redact's public documentation describes authoring content using MDX, but does not indicate that expressions are evaluated server-side. The observed behavior told a different story.
 
 ---
 
