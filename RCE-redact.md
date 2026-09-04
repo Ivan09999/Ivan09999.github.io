@@ -96,14 +96,14 @@ This last point is what makes the finding server-side RCE rather than DOM XSS. T
 
 ### Initial Discovery
 
-The investigation started with a single endpoint: the custom block render route. This route accepts a `source` field containing MDX and returns rendered HTML. It is used by ReadMe's editor to preview content.
+The investigation started with a single endpoint: the custom block render route. This route accepts a `source` field containing MDX and returns rendered HTML. It is used by redact's editor to preview content.
 
 The first probe was arithmetic. If `{ ... }` is evaluated server-side, then `{7*7}` should produce `49` in the response. If evaluation is client-side or disabled, the literal text `{7*7}` should pass through unchanged.
 
 **Probe**
 ```http
 POST /<tenant>/.../custom_blocks/new/render HTTP/1.1
-Host: <tenant>.readme.io
+Host: <tenant>.redact.io
 Cookie: <authenticated session>
 Content-Type: application/json
 
@@ -385,8 +385,8 @@ For security researchers, the lesson is straightforward: when a rendering sink i
 
 ### References
 
-- [ReadMe MDX documentation](https://docs.readme.com/main/docs/mdx)
-- [ReadMe Custom Pages API](https://docs.readme.com/main/reference/getcustompages)
+- [redact MDX documentation](https://docs.redact.com/main/docs/mdx)
+- [redact Custom Pages API](https://docs.redact.com/main/reference/getcustompages)
 - [CWE-94 — Code Injection](https://cwe.mitre.org/data/definitions/94.html)
 - [CWE-78 — OS Command Injection](https://cwe.mitre.org/data/definitions/78.html)
 - [MDX specification](https://mdxjs.com/)
