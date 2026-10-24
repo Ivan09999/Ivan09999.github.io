@@ -18,4 +18,4 @@ Application Security Researcher focused on vulnerability research, offensive sec
 
 - **Certification:** CPTS (Hack The Box),
 - **CVE:** GHSA-9jh8-v38h-cvhr (ammonia mXSS)
-- **Contact:** Marko Ilic lovricm055@gmail.com
+- **Contact:** Ivan Ivančić, ivanivancic721@gmail.com
