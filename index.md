@@ -8,14 +8,16 @@ title: Home
 | Finding | Type | Severity | Status |
 |---------|------|----------|--------|
 | [mXSS in Rust HTML Sanitizer](ammonia-mxss.html) | XSS | <span class="severity-m">Moderate</span> | <span class="status-cve">CVE-2026-63430</span> |
-| [3 RCEs, One Root Cause](RCE-redact.html) | Command Injection | <span class="severity-c">Critical</span> | <span class="status-paid">Paid - $$$$ </span> |
-...
+| [3 RCEs, One Root Cause](RCE-redact.html) | Command Injection | <span class="severity-c">Critical</span> | <span class="status-paid">Paid - $$$$</span> |
+
+More findings coming soon.
+
 ---
 
 ## About
 
-Application Security Researcher focused on vulnerability research, offensive security automation, and AI-assisted application security.
+Application Security Researcher focused on vulnerability research, offensive security automation, AI-assisted application security, and AI security.
 
-- **Certification:** CPTS (Hack The Box),
+- **Certification:** CPTS (Hack The Box)
 - **CVE:** GHSA-9jh8-v38h-cvhr (ammonia mXSS)
-- **Contact:** Ivan Ivančić, ivanivancic721@gmail.com
+- **Contact:** [Ivan Ivančić](mailto:ivanivancic721@gmail.com)
